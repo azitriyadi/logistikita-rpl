@@ -16,6 +16,8 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- HTML5 QrCode (Camera Scanner) -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <link rel="stylesheet" href="assets/css/admin.css">
     <style>
         .batch-info {
@@ -196,6 +198,9 @@
                 </div>
                 <div class="sidebar-item" data-target="reports-view">
                     <i class="fas fa-file-invoice"></i> Laporan
+                </div>
+                <div class="sidebar-item" data-target="hub-ops-view">
+                    <i class="fas fa-barcode"></i> Operasional Hub
                 </div>
             </div>
         </div>
@@ -780,6 +785,76 @@
                             <li style="display: flex; justify-content: space-between;">
                                 <span>Alamat Salah</span>
                                 <span class="text-bold">15%</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===========================
+             VIEW: HUB OPERATIONS
+             =========================== -->
+        <div id="hub-ops-view" class="view-section">
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Operasional Hub</h1>
+                    <p class="page-subtitle">Sistem pemindaian barcode cepat untuk update status paket di Hub.</p>
+                </div>
+            </div>
+
+            <div class="layout-grid">
+                <!-- Barcode Scanner Form -->
+                <div class="panel-card" style="align-self: start;">
+                    <div class="panel-header">
+                        <div>
+                            <h3><i class="fas fa-barcode"></i> Scanner Barcode Resi</h3>
+                            <p>Arahkan kursor ke input di bawah ini sebelum memindai.</p>
+                        </div>
+                    </div>
+                    <div style="padding: 24px;">
+                        <form id="hubScannerForm" onsubmit="event.preventDefault(); submitHubUpdate();">
+                            <div class="form-group-lite" style="margin-bottom: 20px;">
+                                <label style="font-weight: 700; color: #0f172a; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Nomor Resi</span>
+                                    <button type="button" onclick="startCameraScan()" style="background: #eff6ff; color: #3b82f6; border: none; padding: 4px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer;"><i class="fas fa-camera"></i> Scan Kamera</button>
+                                </label>
+                                <div id="reader" style="width: 100%; display: none; margin-bottom: 12px; border-radius: 12px; overflow: hidden; border: 2px solid #e2e8f0;"></div>
+                                <input type="text" id="scanResiInput" placeholder="Scan Barcode Resi di sini..." autofocus style="width: 100%; padding: 16px; font-size: 1.2rem; font-weight: 800; border: 2px solid #e2e8f0; border-radius: 12px; color: #0f172a;" autocomplete="off">
+                            </div>
+
+                            <div class="form-group-lite" style="margin-bottom: 20px;">
+                                <label style="font-weight: 700; color: #0f172a; margin-bottom: 8px; display: block;">Lokasi Cabang / Hub</label>
+                                <input type="text" id="scanLocationInput" value="" readonly style="width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #f1f5f9; color: #64748b; cursor: not-allowed;">
+                            </div>
+
+                            <div class="form-group-lite" style="margin-bottom: 24px;">
+                                <label style="font-weight: 700; color: #0f172a; margin-bottom: 8px; display: block;">Aksi Status</label>
+                                <select id="scanStatusAction" style="width: 100%; padding: 12px; font-size: 1rem; border: 1px solid #e2e8f0; border-radius: 8px; color: #0f172a; background-color: white;">
+                                    <option value="Barang sudah diterima di Hub">Barang sudah diterima di Hub</option>
+                                    <option value="Barang keluar dari Hub">Barang keluar dari Hub</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" id="btnUpdateScan" style="width: 100%; background: #10b981; color: white; border: none; padding: 16px; border-radius: 12px; font-weight: 800; font-size: 1.1rem; cursor: pointer; transition: all 0.2s;"><i class="fas fa-check-circle"></i> Update Status (Enter)</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Session Scan History -->
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <h3><i class="fas fa-list-check"></i> Riwayat Scan Sesi Ini</h3>
+                            <p>Data paket yang berhasil diperbarui.</p>
+                        </div>
+                        <div class="badge" style="background: #eff6ff; color: #3b82f6; padding: 4px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem;" id="sessionScanCount">0 Paket</div>
+                    </div>
+                    <div style="padding: 0;">
+                        <ul id="scanHistoryList" style="list-style: none; margin: 0; padding: 0;">
+                            <li id="emptyScanState" style="padding: 40px 24px; text-align: center; color: #94a3b8;">
+                                <i class="fas fa-box-open" style="font-size: 2rem; margin-bottom: 12px; color: #cbd5e1;"></i>
+                                <p style="margin: 0;">Belum ada resi yang di-scan pada sesi ini.</p>
                             </li>
                         </ul>
                     </div>

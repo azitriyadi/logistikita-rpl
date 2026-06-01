@@ -709,3 +709,187 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
     if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
 });
+
+// ==========================================
+// HUB OPERATIONS (BARCODE SCANNER) LOGIC
+// ==========================================
+let sessionScanCount = 0;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const resiInput = document.getElementById('scanResiInput');
+    const locationInput = document.getElementById('scanLocationInput');
+    const btnUpdateScan = document.getElementById('btnUpdateScan');
+    
+    if (resiInput) {
+        resiInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Mencegah submit form bawaan browser
+                
+                const resiVal = this.value.trim().toUpperCase();
+                if (!resiVal) return;
+                
+                // Simulasi auto-fill cabang berdasarkan data resi (cepat)
+                if (resiVal.includes('SBY')) {
+                    locationInput.value = 'Hub Surabaya';
+                } else {
+                    locationInput.value = 'Hub Bandung';
+                }
+                
+                // Pindah fokus langsung ke tombol update (Workflow Scanner)
+                if (btnUpdateScan) btnUpdateScan.focus();
+            }
+        });
+    }
+});
+
+function submitHubUpdate() {
+    const resiInput = document.getElementById('scanResiInput');
+    const locationInput = document.getElementById('scanLocationInput');
+    const statusSelect = document.getElementById('scanStatusAction');
+    const historyList = document.getElementById('scanHistoryList');
+    const emptyState = document.getElementById('emptyScanState');
+    const countBadge = document.getElementById('sessionScanCount');
+    
+    const resi = resiInput.value.trim().toUpperCase();
+    const lokasi = locationInput.value || 'Hub Bandung';
+    const status = statusSelect.value;
+    
+    if (!resi) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Resi Kosong',
+            text: 'Silakan scan barcode resi terlebih dahulu.',
+            confirmButtonColor: '#10b981'
+        }).then(() => {
+            resiInput.focus();
+        });
+        return;
+    }
+    
+    // 1. Menampilkan notifikasi sukses yang cepat (tidak memblokir layar terlalu lama)
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `Resi ${resi} diupdate!`,
+        showConfirmButton: false,
+        timer: 1500,
+        timerProgressBar: true
+    });
+    
+    // 2. Prepend ke daftar riwayat (di bagian atas)
+    if (emptyState) emptyState.style.display = 'none';
+    
+    const now = new Date();
+    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + 
+                    String(now.getMinutes()).padStart(2, '0') + ':' + 
+                    String(now.getSeconds()).padStart(2, '0');
+                    
+    const li = document.createElement('li');
+    li.style.padding = '16px 24px';
+    li.style.borderBottom = '1px solid #e2e8f0';
+    li.style.backgroundColor = '#ffffff';
+    li.style.display = 'flex';
+    li.style.justifyContent = 'space-between';
+    li.style.alignItems = 'center';
+    li.style.transition = 'all 0.3s ease';
+    
+    li.innerHTML = `
+        <div>
+            <div style="font-weight: 800; color: #0f172a; margin-bottom: 4px; font-size: 1.1rem;">${resi}</div>
+            <div style="font-size: 0.85rem; color: #64748b;">
+                <span style="color: #10b981; font-weight: 700;">${status}</span> &bull; ${lokasi}
+            </div>
+        </div>
+        <div style="font-size: 0.8rem; color: #94a3b8; font-weight: 600;">
+            <i class="far fa-clock"></i> ${timeStr}
+        </div>
+    `;
+    
+    historyList.insertBefore(li, historyList.firstChild);
+    
+    // Update counter
+    sessionScanCount++;
+    if (countBadge) countBadge.innerText = `${sessionScanCount} Paket`;
+    
+    // 3. Reset form and auto-focus back to input for rapid scanning
+    resiInput.value = '';
+    locationInput.value = '';
+    resiInput.focus();
+}
+
+// ==========================================
+// CAMERA SCANNER LOGIC (html5-qrcode)
+// ==========================================
+let html5QrcodeScanner = null;
+
+function startCameraScan() {
+    const readerDiv = document.getElementById('reader');
+    if (!readerDiv) return;
+    
+    // Toggle visibility
+    if (readerDiv.style.display === 'block') {
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear().catch(e => console.error(e));
+        }
+        readerDiv.style.display = 'none';
+        return;
+    }
+    
+    readerDiv.style.display = 'block';
+    
+    // Inisialisasi scanner jika belum ada
+    if (!html5QrcodeScanner) {
+        html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { 
+                fps: 10, 
+                qrbox: { width: 300, height: 150 }, // Bentuk persegi panjang cocok untuk barcode
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] 
+            },
+            false
+        );
+    }
+    
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+    // 1. Matikan kamera setelah berhasil dapat data
+    if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch(error => {
+            console.error("Gagal menghentikan scanner.", error);
+        });
+    }
+    document.getElementById('reader').style.display = 'none';
+    
+    // 2. Isi kolom input
+    const resiInput = document.getElementById('scanResiInput');
+    if (resiInput) {
+        resiInput.value = decodedText;
+        
+        // 3. Simulasikan auto-fill cabang
+        const locationInput = document.getElementById('scanLocationInput');
+        const resiVal = decodedText.trim().toUpperCase();
+        
+        if (resiVal.includes('SBY')) {
+            locationInput.value = 'Hub Surabaya';
+        } else {
+            locationInput.value = 'Hub Bandung';
+        }
+        
+        // 4. Fokuskan ke tombol update
+        const btnUpdateScan = document.getElementById('btnUpdateScan');
+        if (btnUpdateScan) btnUpdateScan.focus();
+        
+        // Opsional: Bunyikan suara Beep sukses ringan
+        try {
+            const audio = new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3');
+            audio.play();
+        } catch(e) {}
+    }
+}
+
+function onScanFailure(error) {
+    // Diabaikan karena scanner akan terus membaca frame demi frame
+}
